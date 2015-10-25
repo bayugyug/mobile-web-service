@@ -1,1 +1,2 @@
-# mobile-web-service
+# LDAP-Api
+REST API for LDAP
