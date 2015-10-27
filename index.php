@@ -122,6 +122,20 @@ $app->group('/ldap', function () use ($app,&$api)
 			return true;
 		})->via('GET', 'POST');
 		
+		//create passcode
+		$app->map('/create_passcode', function () use ($app,&$api) 
+		{
+			$api['LDAP_Api']->hit(API_HIT_ENTRY_CREATE_PASSCODE,$app);
+			return true;
+		})->via('GET', 'POST');
+		
+		//check passcode
+		$app->map('/check_passcode', function () use ($app,&$api) 
+		{
+			$api['LDAP_Api']->hit(API_HIT_ENTRY_CHECK_PASSCODE,$app);
+			return true;
+		})->via('GET', 'POST');
+		
 		//list
 		$app->map('/list', function () use ($app,&$api) 
 		{
@@ -241,6 +255,27 @@ $app->group('/websvc', function () use ($app, $api)
 			$app->map('/visaguidance', function () use ($app, $api) 
 			{
 				$api['VISA_GUIDANCE_Api']->hit(API_HIT_VISAGUIDANCE_SEARCH);
+				return true;
+			})->via('GET', 'POST'); 
+			
+			//nationality
+			$app->map('/getnationality', function () use ($app, $api) 
+			{
+				$api['VISA_GUIDANCE_Api']->hit(API_HIT_VG_NATIONALITY_SEARCH);
+				return true;
+			})->via('GET', 'POST'); 
+			
+			//countries
+			$app->map('/getdestination', function () use ($app, $api) 
+			{
+				$api['VISA_GUIDANCE_Api']->hit(API_HIT_VG_DESTINATION_SEARCH);
+				return true;
+			})->via('GET', 'POST'); 
+			
+			//countries
+			$app->map('/getvisatype', function () use ($app, $api) 
+			{
+				$api['VISA_GUIDANCE_Api']->hit(API_HIT_VG_VISATYPE_SEARCH);
 				return true;
 			})->via('GET', 'POST'); 
 
@@ -380,6 +415,21 @@ $app->group('/websvc', function () use ($app, $api)
 {
 		$app->group('/portguide', function () use ($app,$api) 
 		{
+		
+			//port of interest (poi)
+			$app->map('/search-continent', function () use ($app, $api) 
+			{
+				$api['PORT_GUIDE_Api']->hit(API_HIT_PORT_GUIDE_CONTINENTS);
+				return true;
+			})->via('GET', 'POST'); 
+			
+			//port of interest (poi)
+			$app->map('/search-port', function () use ($app, $api) 
+			{
+				$api['PORT_GUIDE_Api']->hit(API_HIT_PORT_GUIDE_PORTS);
+				return true;
+			})->via('GET', 'POST'); 
+			
 			//port of interest (poi)
 			$app->map('/poi', function () use ($app, $api) 
 			{

@@ -1,0 +1,35 @@
+<?php
+
+$host   = "localhost";
+$dbname = "gses";
+$username = "root";
+$password = "password";
+
+try {
+    $conn = new PDO('mysql:host=' . $host . ';dbname=' . $dbname, $username, $password);
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch(PDOException $e) {
+    die('ERROR: ' . $e->getMessage());
+}
+
+$query = "select id,title,introtext,jos_content.fulltext as details from jos_content order by id desc limit 10";
+$stmt = $conn->prepare($query);
+$stmt->execute();
+
+$newsItems = $stmt->fetchAll();
+$responseArray = array();
+
+for ($i = 1; $i <= count(newsItems); $i++)
+{
+   $newsItem = array('id' => $newsItems[$i]['id'],
+                    'title' => htmlspecialchars($newsItems[$i]['title']),
+                    'introtext' => htmlspecialchars($newsItems[$i]['introtext']),
+                    'details' => htmlspecialchars($newsItems[$i]['details']));
+
+   array_push($responseArray,$newsItem);
+}
+
+echo json_encode(array("News" =>$responseArray));
+
+?>
+

@@ -307,7 +307,10 @@ class LATEST_NEWS_Api extends Default_Api{
 		{
 			while($strow = $gSqlDbSvc['DBCREWTRAVEL']->getAssoc($res))
 			{
+				$strow['introtext'] = strip_tags($strow['introtext']);
+				$strow['maintext'] = strip_tags($strow['maintext']);
 				$data[] = $strow;
+				
 			}
 		}
 		

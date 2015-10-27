@@ -1,0 +1,31 @@
+<?php
+
+$host   = "10.8.0.23";
+$dbname = "gses";
+$username = "gses";
+$password = "ph03n1x1";
+
+// TODO: Remove this after development
+/*
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+*/
+
+$port = trim($_GET['port']);
+
+// Connection to the main database
+try {
+    $conn = new PDO('mysql:host=' . $host . ';dbname=' . $dbname, $username, $password);
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch(PDOException $e) {
+    die('ERROR: ' . $e->getMessage());
+}
+
+// $query = "select id,title,introtext from jos_content where catid=160 and sectionid=48 and title like '%" . $port . "%'";
+$query = "select id,title,introtext from jos_content where title like '%" . $port . "%'";
+$stmt = $conn->prepare($query);
+$stmt->execute();
+
+$portInfo = $stmt->fetch();
+echo json_encode(array("PortPOI" => utf8_encode($portInfo['introtext'])));
+?>

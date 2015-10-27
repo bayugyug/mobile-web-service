@@ -91,6 +91,14 @@ class LDAP_Api{
 			case API_HIT_ENTRY_SEARCH:
 				$this->do_entry_search();
 				break;
+				
+			case API_HIT_ENTRY_CREATE_PASSCODE:
+				$this->do_create_passcode();
+				break;
+				
+			case API_HIT_ENTRY_CHECK_PASSCODE:
+				$this->do_validate_passcode();
+				break;
 			case API_HIT_ENTRY_LIST:
 				$this->do_entry_list();
 				break;
@@ -530,6 +538,7 @@ class LDAP_Api{
 			$reply['statuscode'] = HTTP_SUCCESS;
 			$reply['message']    = "Sign-in successful.";
 			$reply['result']     = array();
+			$reply['user_role']     = $bdata['data']['user_role'];
 			$reply['sessionid']  = $newsession;
 			// $reply['cns']        = $member;
 			// $reply['migrated']   = $dtls;
@@ -570,6 +579,148 @@ class LDAP_Api{
 			  @ldap_free_result($ldapconn);
 	
 	}
+	
+	//create passcode
+	protected function do_create_passcode()
+	{
+			global $_API_KEYS;
+		
+			//get params
+			$user   = trim($_REQUEST['user']);
+			
+			$reply = $this->init_resp();
+
+			//sanity check -> LISTS
+			if( !strlen($user) )
+			{
+				//fmt reply 500
+				$reply['statuscode'] = HTTP_BAD_REQUEST;
+				$reply['message']    = "Invalid parameters!";
+				//give it back
+				$this->send_reply($reply);
+				
+				return;
+			}
+
+			
+			//chk email
+			$bdata = $this->ldap_user_get_by_userid($user);
+			if(!$bdata['exists'])
+			{
+					//fmt reply 404
+					$reply['statuscode'] = HTTP_BAD_REQUEST;
+					$reply['message']    = "User not found in db!";
+					//give it back
+					$this->send_reply($reply);
+					return;
+			}
+			$dmp = @var_export($bdata,1);				
+			debug("DB-RROW> $dmp");
+			
+			// generate random passcode
+			$passcode = $this->random_password();
+			
+			// update sso users
+			$this->create_passcode($bdata['data']['email'], $passcode);
+			
+			// send email
+			$headers = 'From: webmaster@rcclportal.com' . "\r\n" .
+					'Reply-To: webmaster@rcclportal.com' . "\r\n" .
+					'X-Mailer: PHP/' . phpversion();
+			$to = $bdata['data']['email'];
+			$subject = 'RCCL Mobile - Passcode';
+			$message = "Hi $user,\n\n Your passcode is $passcode";
+			mail($to, $subject, $message, $headers);
+
+			
+			//free memory
+			$this->unset_sess_id();
+			$this->set_sess_id();	
+			
+			//fmt reply 200
+			$reply['status']     = true;
+			$reply['statuscode'] = HTTP_SUCCESS;
+			$reply['message']    = "Password Reset Code Success";
+			
+			//give it back
+			$this->send_reply($reply);
+
+			//free
+			if($ldapconn)
+			  @ldap_free_result($ldapconn);
+	
+	}
+	
+	// validate passcode
+	protected function do_validate_passcode()
+	{
+		global $_API_KEYS;
+		
+		//get params
+		$user   = trim($_REQUEST['user']);
+		$passcode   = trim($_REQUEST['passcode']);
+		
+		$reply = $this->init_resp();
+
+		//sanity check -> LISTS
+		if( !strlen($user) || !strlen($passcode)  )
+		{
+			//fmt reply 500
+			$reply['statuscode'] = HTTP_BAD_REQUEST;
+			$reply['message']    = "Invalid parameters!";
+			//give it back
+			$this->send_reply($reply);
+			
+			return;
+		}
+
+		
+		//chk email
+		$bdata = $this->ldap_user_get_by_userid($user);
+		if(!$bdata['exists'])
+		{
+				//fmt reply 404
+				$reply['statuscode'] = HTTP_BAD_REQUEST;
+				$reply['message']    = "User not found in db!";
+				//give it back
+				$this->send_reply($reply);
+				return;
+		}
+		$dmp = @var_export($bdata,1);				
+		debug("DB-RROW> $dmp");
+		
+		// check if passcode is valid
+		// passcode == passcode and passcode_flag == 10-03
+		if ($passcode == $bdata['data']['passcode'] && $bdata['data']['passcode_flag'] == 1)
+		{
+			//fmt reply 200
+			$reply['status']     = true;
+			$reply['statuscode'] = HTTP_SUCCESS;
+			$reply['message']    = "Passcode is valid";
+		}
+		else
+		{
+			// invalid passcode
+			$reply['statuscode'] = HTTP_BAD_REQUEST;
+			$reply['message']    = "Invalid passcode";
+		}
+	
+		
+		//free memory
+		$this->unset_sess_id();
+		$this->set_sess_id();	
+		
+		
+		
+		//give it back
+		$this->send_reply($reply);
+
+		//free
+		if($ldapconn)
+		  @ldap_free_result($ldapconn);
+
+	}
+	
 	//search
 	protected function do_entry_search()
 	{
@@ -1762,7 +1913,8 @@ class LDAP_Api{
 	{
 			//get params
 			$user   = trim($_REQUEST['user']);
-			$pass   = trim($_REQUEST['pass']);
+			$passcode = trim($_REQUEST['passcode']);
+			$pass   = trim($_REQUEST['newpass']);
 			
 			//init
 			$reply  = $this->init_resp();
@@ -1770,6 +1922,7 @@ class LDAP_Api{
 			//sanity check -> LISTS
 			if(
 				!strlen($user)    or 
+				!strlen($passcode) or
 				!strlen($pass)    
 			)
 			{
@@ -1793,68 +1946,92 @@ class LDAP_Api{
 					return;
 			}
 			
-			//conn
-			$res = $this->try_ldap(LDAP_ADMIN_USER,null,null,LDAP_ENTRY_ROOT_DN_UPD);
-			if(!$res['ldapstat'])
+			// check if passcode is valid
+			// passcode == passcode and passcode_flag == 10-03
+			// echo "Passcode:: " . $passcode . " ----  Pasccode db:: " . $bdata['data']['passcode'] . " -- Passcode flag? " . $bdata['data']['passcode_flag'];
+			// exit();
+			if ($passcode != $bdata['data']['passcode'] && $bdata['data']['passcode_flag'] != 0)
 			{
-				$this->send_reply($res['ldapmesg']);
+				//fmt reply 200
+				$reply['status']     = false;
+				$reply['statuscode'] = HTTP_FORBIDDEN;
+				$reply['message']    = "Invalid Passcode";
+				
+				//give it back
+				$this->send_reply($reply);
 				return;
 			}
-
-			//get conn
-			$ldapconn                = $res['ldapconn'];
-			
-			// prepare data
-			$info["userPassword"]    = '{md5}' . base64_encode(pack('H*', md5($pass)));
-			
-			$dmp = @var_export($bdata,1);				
-			debug("DB-RROW> $dmp");
-
-			
-			//get the UID from DB
-			$user = $bdata['data']['rw_id'];
-			
-			//update ldap password
-			if(1)
+			else
 			{
-				    //GROUPS
-					$ldaprdn  = sprintf("uid=%s,%s",$user,LDAP_RDN_GROUPS);  
-					
-					$dmp = @var_export($info,1);				
-					debug("$kk> RESET-PASS > DN=$ldaprdn; [ $dmp ]");
-			
-					//update entry
-					$update  = ldap_modify($ldapconn, $ldaprdn, $info);
-					if(!$update)
-					{
-							//fmt reply 403
-							$reply['status']     = false;
-							$reply['statuscode'] = HTTP_FORBIDDEN;
-							$reply['message']    = "Reset password failed.";
-							$reply['error']      = $this->fmt_err_msg($ldapconn);
-							
-							//give it back
-							$this->send_reply($reply);
-							return;
-					}
-					
+				//conn
+				$res = $this->try_ldap(LDAP_ADMIN_USER,null,null,LDAP_ENTRY_ROOT_DN_UPD);
+				if(!$res['ldapstat'])
+				{
+					$this->send_reply($res['ldapmesg']);
+					return;
+				}
+
+				//get conn
+				$ldapconn                = $res['ldapconn'];
+				
+				// prepare data
+				$info["userPassword"]    = '{md5}' . base64_encode(pack('H*', md5($pass)));
+				
+				$dmp = @var_export($bdata,1);				
+				debug("DB-RROW> $dmp");
+
+				
+				//get the UID from DB
+				$user = $bdata['data']['rw_id'];
+				
+				//update ldap password
+				if(1)
+				{
+						//GROUPS
+						$ldaprdn  = sprintf("uid=%s,%s",$user,LDAP_RDN_GROUPS);  
+						
+						$dmp = @var_export($info,1);				
+						debug("$kk> RESET-PASS > DN=$ldaprdn; [ $dmp ]");
+				
+						//update entry
+						$update  = ldap_modify($ldapconn, $ldaprdn, $info);
+						if(!$update)
+						{
+								//fmt reply 403
+								$reply['status']     = false;
+								$reply['statuscode'] = HTTP_FORBIDDEN;
+								$reply['message']    = "Reset password failed.";
+								$reply['error']      = $this->fmt_err_msg($ldapconn);
+								
+								//give it back
+								$this->send_reply($reply);
+								return;
+						}
+						
+				}
+				
+				// reset passcode_flag
+				$this->update_passcode_flag($bdata['data']['email']);
+
+				//reset password, use the parameter
+				$ndata['email' ] = $bdata['data']['email'] ;
+				$ndata['pass']   = base64_encode(pack('H*', md5($pass)));
+				$rawstr          = $this->str_enc($pass);
+				$ndata['pass']   = "$rawstr";
+				$pret            = $this->ldap_user_upd_pwd_db($ndata);
+
+				//fmt reply 200
+				$reply['status']     = true;
+				$reply['statuscode'] = HTTP_SUCCESS;
+				$reply['message']    = "Reset password successful.";
+				$reply['result']     = array(
+									 );
+				//give it back
+				$this->send_reply($reply);
 			}
-
-			//reset password, use the parameter
-			$ndata['email' ] = $bdata['data']['email'] ;
-			$ndata['pass']   = base64_encode(pack('H*', md5($pass)));
-			$rawstr          = $this->str_enc($pass);
-			$ndata['pass']   = "$rawstr";
-			$pret            = $this->ldap_user_upd_pwd_db($ndata);
-
-			//fmt reply 200
-			$reply['status']     = true;
-			$reply['statuscode'] = HTTP_SUCCESS;
-			$reply['message']    = "Reset password successful.";
-			$reply['result']     = array(
-								 );
-			//give it back
-			$this->send_reply($reply);
+			
+			
+			
 
 			//free
 			if($ldapconn)
@@ -2148,6 +2325,78 @@ class LDAP_Api{
 		//give it back
 		return $_SESSION[API_SID_NAME];
 	}
+	
+	// update new user passcode
+	protected function create_passcode($email, $passcode)
+	{
+		global $gSqlDb;
+		
+		//debug("reset_login_attempts() : INFO : [ USER=$email; ]");
+		$email      = addslashes(trim($email));
+		$passcode      = addslashes(trim($passcode));
+		
+		//exec
+		$sql = "UPDATE sso_users 
+			SET 
+				passcode    = '$passcode', passcode_flag = 1
+			WHERE 
+				email = '$email' LIMIT 1
+			";
+			  
+		  
+		$res   = $gSqlDb->exec($sql, "reset_login_attempts() : ERROR : $sql");
+		$is_ok = $gSqlDb->updRows($res);
+
+		// debug("reset_login_attempts() : INFO : [ $sql => $res => $is_ok ]");
+
+		//free-up
+		if($res) $gSqlDb->free($res);
+
+		
+		//give it back ;-)
+		return $is_ok;
+		
+	}
+	
+	// update passcode_flag
+	protected function update_passcode_flag($email)
+	{
+		global $gSqlDb;
+		
+		//debug("reset_login_attempts() : INFO : [ USER=$email; ]");
+		$email      = addslashes(trim($email));
+		$passcode      = addslashes(trim($passcode));
+		
+		//exec
+		$sql = "UPDATE sso_users 
+			SET 
+				passcode_flag = 0
+			WHERE 
+				email = '$email' LIMIT 1
+			";
+			  
+		  
+		$res   = $gSqlDb->exec($sql, "update_passcode_flag() : ERROR : $sql");
+		$is_ok = $gSqlDb->updRows($res);
+
+		// debug("reset_login_attempts() : INFO : [ $sql => $res => $is_ok ]");
+
+		//free-up
+		if($res) $gSqlDb->free($res);
+
+		
+		//give it back ;-)
+		return $is_ok;
+		
+	}
+	
+	// create random password
+	function random_password( $length = 15 ) 
+	{
+		$chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+		$password = substr( str_shuffle( $chars ), 0, $length );
+		return $password;
+    }
 	
 	
 	// reset login attempts

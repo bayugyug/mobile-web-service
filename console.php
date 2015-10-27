@@ -18,7 +18,7 @@
 	    word-wrap: break-word;
     	    overflow-wrap: break-word;
 	    text-overflow: ellipsis;
-	    width: 720px; 
+	    width: 788px; 
 	}
 </style>
 </head>
@@ -45,6 +45,8 @@
 					<option value="">- - - - - - </option>
 					<option value="/mobile-webservice/index.php/ldap/restapi/signin"     >01. LDAP Sign-in User</option>
 					<option value="/mobile-webservice/index.php/ldap/restapi/search"     >02. LDAP Search User</option>
+					<option value="/mobile-webservice/index.php/ldap/restapi/create_passcode" >03. LDAP Create User Passcode</option>
+					<option value="/mobile-webservice/index.php/ldap/restapi/check_passcode" >04. LDAP Validate User Passcode</option>
 					<option value="/mobile-webservice/index.php/ldap/restapi/changepass" >05. LDAP User Change Password</option>
 					<option value="/mobile-webservice/index.php/ldap/restapi/sid"        >09. LDAP User Session (by SID SessionId)</option>
 					<option value="/mobile-webservice/index.php/ldap/restapi/signout"    >10. LDAP Sign-out User</option>
@@ -53,11 +55,16 @@
 					<option value="/mobile-webservice/index.php/ldap/restapi/decryptword">13. LDAP Utils (Decrypt)</option>
 					<option value="/mobile-webservice/index.php/ldap/restapi/changemail" >14. LDAP User Change Email</option>
 					<option value="">- - - - - - </option>
-					<option value="/mobile-webservice/index.php/websvc/newsfeed/visaguidance" >15. VISA Guidance</option>
+					<option value="/mobile-webservice/index.php/websvc/newsfeed/getnationality" >15a. Get Nationality</option>
+					<option value="/mobile-webservice/index.php/websvc/newsfeed/getdestination" >15b. Get Destinaton</option>
+					<option value="/mobile-webservice/index.php/websvc/newsfeed/getvisatype" >15c. Get VISA Type</option>
+					<option value="/mobile-webservice/index.php/websvc/newsfeed/visaguidance" >15d. VISA Guidance</option>
 					<option value="">- - - - - - </option>
 					<option value="/mobile-webservice/index.php/websvc/traveltips/default"      >16. TRAVEL Tips</option>
 					<option value="/mobile-webservice/index.php/websvc/travelitinerary/default" >17. TRAVEL Itinerary</option>
 					<option value="">- - - - - - </option>
+					<option value="/mobile-webservice/index.php/websvc/portguide/search-continent" >18a. PORT GUIDE - Get Continent
+					<option value="/mobile-webservice/index.php/websvc/portguide/search-port">  18b. PORT GUIDE - Get Ports
 					<option value="/mobile-webservice/index.php/websvc/portguide/poi"            >18. PORT GUIDE - Points of Interest (POI)</option>
 					<option value="/mobile-webservice/index.php/websvc/portguide/agent"          >19. PORT GUIDE - Port Agent (Port Name)</option>
 					<option value="/mobile-webservice/index.php/websvc/portguide/getports1"      >20. PORT GUIDE - Port Information - 1 (menu/title)</option>

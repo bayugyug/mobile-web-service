@@ -7,6 +7,8 @@ $(function() {
 	//list remote urls
 	params["/mobile-webservice/index.php/ldap/restapi/signin"]     = ["user", "pass"]; 
 	params["/mobile-webservice/index.php/ldap/restapi/search"]     = ["user"]; 
+	params["/mobile-webservice/index.php/ldap/restapi/create_passcode"]  = ["user"]; 
+	params["/mobile-webservice/index.php/ldap/restapi/check_passcode"]  = ["user", "passcode"]; 
 	params["/mobile-webservice/index.php/ldap/restapi/list"]       = ["company"]; 
 	params["/mobile-webservice/index.php/ldap/restapi/modify"]     = ["user", "firstname", "middlename", "lastname","description","active"]; 
 	params["/mobile-webservice/index.php/ldap/restapi/changepass"] = ["user", "pass", "newpass"]; 
@@ -15,14 +17,17 @@ $(function() {
 	params["/mobile-webservice/index.php/ldap/restapi/session"]    = ["user", "company"]; 
 	params["/mobile-webservice/index.php/ldap/restapi/sid"]        = ["sid"]; 
 	params["/mobile-webservice/index.php/ldap/restapi/signout"]    = ["user", "company"]; 
-	params["/mobile-webservice/index.php/ldap/restapi/resetpass"]  = ["user", "pass"]; 
+	params["/mobile-webservice/index.php/ldap/restapi/resetpass"]  = ["user", "passcode", "newpass"]; 
 	params["/mobile-webservice/index.php/ldap/restapi/encryptword"]= ["word"]; 
 	params["/mobile-webservice/index.php/ldap/restapi/decryptword"]= ["word"]; 
 	params["/mobile-webservice/index.php/ldap/restapi/changemail"] = ["user", "email"];
 	
 	
 	//visaguide
-	params["/mobile-webservice/index.php/websvc/newsfeed/visaguidance"] = ["country","nationality","page", "batch"];
+	params["/mobile-webservice/index.php/websvc/newsfeed/getnationality"] = [];
+	params["/mobile-webservice/index.php/websvc/newsfeed/getdestination"] = ["country_code"];
+	params["/mobile-webservice/index.php/websvc/newsfeed/getvisatype"] = ["nationality_code", "destination_code"];
+	params["/mobile-webservice/index.php/websvc/newsfeed/visaguidance"] = ["nationality_code","destination_code","visa_type"];
 	
 	//traveltips
 	//-- tips
@@ -32,6 +37,10 @@ $(function() {
 	
 	//port-guides 
 	//-- point of interest
+	params["/mobile-webservice/index.php/websvc/portguide/search-continent"]     = ["page","batch"];
+	params["/mobile-webservice/index.php/websvc/portguide/search-port"]     = ["continent_id", "page", "batch"];
+	
+	
 	params["/mobile-webservice/index.php/websvc/portguide/poi"]              = ["port","page", "batch"];
 	params["/mobile-webservice/index.php/websvc/portguide/agent"]            = ["port","page", "batch"];
 	params["/mobile-webservice/index.php/websvc/portguide/getports1"]        = ["menu","title", "page", "batch"];
@@ -119,6 +128,8 @@ $(function() {
 		
 		$('#tdResponse').html('&nbsp');
 		$('#txtResponse').html('&nbsp');
+		$('#txtResponse').html('<div class="alert alert-warning" style="width:95%">Please wait while we are retrieving from API server  <span class="glyphicon glyphicon-download-alt"></span></div>');
+		
         if ($('#txtURL').val() != "")
         {
             var params = getData();
@@ -131,6 +142,10 @@ $(function() {
 				  console.log(resp);
             });
         }
+		else
+		{
+			$('#txtResponse').html('&nbsp');
+		}
 
     });
 	

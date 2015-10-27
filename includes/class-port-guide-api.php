@@ -63,6 +63,12 @@ class PORT_GUIDE_Api extends Default_Api{
 			//chk it
 			switch($this->action)
 			{
+				case API_HIT_PORT_GUIDE_CONTINENTS:
+					$this->do_entry_search_continents();
+					break;
+				case API_HIT_PORT_GUIDE_PORTS:
+					$this->do_entry_search_ports();
+					break;
 				case API_HIT_PORT_GUIDE_POI:
 					$this->do_entry_search_poi();
 					break;
@@ -100,6 +106,104 @@ class PORT_GUIDE_Api extends Default_Api{
 		}
 			
 	}	
+	
+	// get continents
+	protected function do_entry_search_continents()
+	{
+		//get params
+			// $port  = trim($_REQUEST['port']);
+			
+			//get paging
+			$paging            = $this->paging();
+			
+			$res = $this->get_continents(
+						array(
+							'page'     => $paging['pagex'],
+							'batch'    => $paging['batch'],
+							)
+						);
+						
+			if(!$res['exists'])
+			{
+				//fmt reply 404
+				$reply['statuscode'] = HTTP_NOT_FOUND;
+				$reply['message']    = "No List found!";
+				//give it back
+				$this->send_reply($reply);
+				return;
+			}
+			
+			//fmt reply 200
+			$reply['status']     = true;
+			$reply['statuscode'] = HTTP_SUCCESS;
+			$reply['message']    = "List(s) found!";
+			$reply['result']     = $res['data'];
+			// $reply['batch']      = @intval(@count($res['data']));
+			
+			//paging
+			$reply['totalrows']  = $res['totalrows']['total'];
+			$reply['currpage']   = (@count($res['data'])) ? ( $paging['page']    ) : 1;
+			// $reply['nextpage']   = (@count($res['data'])) ? ( $paging['page'] + 1) : 1;
+			
+			$this->send_reply($reply);
+	}
+	
+	// get ports
+	protected function do_entry_search_ports()
+	{
+		//get params
+			$continent_id  = trim($_REQUEST['continent_id']);
+			
+			//get paging
+			$paging            = $this->paging();
+			
+			if(
+				!strlen($continent_id) 
+			)
+			{
+				//fmt reply 500
+				$reply['statuscode'] = HTTP_INTERNAL_SERVER_ERROR;
+				$reply['message']    = "Invalid parameters!";
+				//give it back
+				$this->send_reply($reply);
+				return;
+			}
+			
+			// get array of ports
+			$countryports = $this->get_country_ports($continent_id);
+			
+			$res = $this->get_ports(
+						array(
+							'continent_id' => $countryports,
+							'page'     => $paging['pagex'],
+							'batch'    => $paging['batch'],
+							)
+						);
+						
+			if(!$res['exists'])
+			{
+				//fmt reply 404
+				$reply['statuscode'] = HTTP_NOT_FOUND;
+				$reply['message']    = "No List found!";
+				//give it back
+				$this->send_reply($reply);
+				return;
+			}
+			
+			//fmt reply 200
+			$reply['status']     = true;
+			$reply['statuscode'] = HTTP_SUCCESS;
+			$reply['message']    = "List(s) found!";
+			$reply['result']     = $res['data'];
+			$reply['batch']      = @intval(@count($res['data']));
+			
+			//paging
+			$reply['totalrows']  = $res['totalrows']['total'];
+			$reply['currpage']   = (@count($res['data'])) ? ( $paging['page']    ) : 1;
+			// $reply['nextpage']   = (@count($res['data'])) ? ( $paging['page'] + 1) : 1;
+			
+			$this->send_reply($reply);
+	}
 	
 	//search
 	protected function do_entry_search_poi()
@@ -298,6 +402,7 @@ class PORT_GUIDE_Api extends Default_Api{
 							)
 						);
 						
+						
 			if(!$res['exists'])
 			{
 				//fmt reply 404
@@ -390,6 +495,230 @@ class PORT_GUIDE_Api extends Default_Api{
 	
 	//------------------------------------------------------------------
 	//get data
+	
+	//get data
+	protected function get_continents($pdata=array())
+	{
+		//globals here
+		global $gSqlDb,$gSqlDbSvc;
+	
+		$dmp = @var_export($pdata,1);
+		debug("get_continents() : INFO : [ $dmp;]");
+		
+		//fmt
+		$pg    = $pdata['page'];
+		$mx    = $pdata['batch'];
+			
+		//filter
+		$xwhere   = array();
+
+		
+		//fmt-params
+		$limit = " LIMIT $pg, $mx ";
+		$more  = @join("\n",$xwhere);
+		
+		//select
+		$sql = "SELECT SQL_CALC_FOUND_ROWS 
+					id,
+					title
+				FROM 
+					tbl_menu 
+				WHERE 1=1
+				AND id in (1094, 67, 1095,1098, 1197, 1099)	
+				ORDER BY id
+				$limit
+		       ";
+		$res   = $gSqlDbSvc['DBCREWTRAVEL']->query($sql, "get_port_of_interest() : ERROR : $sql");
+
+		//total-rows
+		$is_ok = $gSqlDbSvc['DBCREWTRAVEL']->numRows($res);
+		$data  = array();
+		$sdata = array('exists' => intval($is_ok));
+		
+		//get data
+		
+		if($is_ok>0)
+		{
+			while($strow = $gSqlDbSvc['DBCREWTRAVEL']->getAssoc($res))
+			{
+				// $strow['introtext'] = strip_tags($strow['introtext']);
+				// $strow['maintext'] = strip_tags($strow['maintext']);
+				// $strow['introtext'] = trim(preg_replace('/\s+/', ' ', $strow['introtext']));
+				// $strow['maintext'] = trim(preg_replace('/\s+/', ' ', $strow['maintext']));
+				$data[] = $strow;
+			}
+		}
+		
+		//save
+		$sdata['data']      = $data;
+		$sdata['totalrows'] = $this->get_total_rows();
+		
+		debug("get_continents() : INFO : [ $sql => $is_ok ]");
+		
+		//free-up
+		if($res) $gSqlDbSvc['DBCREWTRAVEL']->free($res);
+		
+		//give it back ;-)
+		return $sdata;
+		
+	}
+	
+	protected function get_ports($pdata=array())
+	{
+		//globals here
+		global $gSqlDb,$gSqlDbSvc;
+	
+		$dmp = @var_export($pdata,1);
+		for ($i=0; $i < count($pdata['continent_id']); $i++)
+		{
+			$ids .= $pdata['continent_id'][$i].',';
+		}
+		$ids = substr($ids, 0, -1);
+		debug("get_ports() : INFO : [ $dmp;]");
+		
+		//fmt
+		$pg    = $pdata['page'];
+		$mx    = $pdata['batch'];
+			
+
+		
+		//fmt-params
+		$limit = " LIMIT $pg, $mx ";
+		// $more  = @join("\n",$xwhere);
+		
+		//select
+		$sql = "SELECT SQL_CALC_FOUND_ROWS 
+					id,
+					title,
+					img
+				FROM 
+					tbl_menu 
+				WHERE 1=1
+				AND parent_id in ($ids)
+				ORDER BY id
+				$limit
+		       ";
+		$res   = $gSqlDbSvc['DBCREWTRAVEL']->query($sql, "get_ports() : ERROR : $sql");
+
+		//total-rows
+		$is_ok = $gSqlDbSvc['DBCREWTRAVEL']->numRows($res);
+		$data  = array();
+		$sdata = array('exists' => intval($is_ok));
+		
+		//get data
+		
+		if($is_ok>0)
+		{
+			while($strow = $gSqlDbSvc['DBCREWTRAVEL']->getAssoc($res))
+			{
+				// $strow['introtext'] = strip_tags($strow['introtext']);
+				// $strow['maintext'] = strip_tags($strow['maintext']);
+				// $strow['introtext'] = trim(preg_replace('/\s+/', ' ', $strow['introtext']));
+				// $strow['maintext'] = trim(preg_replace('/\s+/', ' ', $strow['maintext']));
+				$title = $string = str_replace(' ', '', strtolower($strow['title']));
+				$url = "http://dev2.rclcrewtravel.com/images/ports_place/" . $title;
+				$data[] = $strow;
+			}
+		}
+		
+		//save
+		$sdata['data']      = $data;
+		$sdata['totalrows'] = $this->get_total_rows();
+		
+		debug("get_ports() : INFO : [ $sql => $is_ok ]");
+		
+		//free-up
+		if($res) $gSqlDbSvc['DBCREWTRAVEL']->free($res);
+		
+		//give it back ;-)
+		return $sdata;
+		
+	}
+	
+	function get_text($filename) {
+		$fp_load = fopen("$filename", "rb");
+
+		if ( $fp_load ) {
+
+				while ( !feof($fp_load) ) {
+					$content .= fgets($fp_load, 8192);
+				}
+
+				fclose($fp_load);
+
+				return $content;
+
+		}
+	}
+
+	
+	protected function get_country_ports($continent_id)
+	{
+		//globals here
+		global $gSqlDb,$gSqlDbSvc;
+	
+		$dmp = @var_export($pdata,1);
+		debug("get_country_ports() : INFO : [ $dmp;]");
+	
+			
+		//filter
+		$xwhere   = array();
+		
+		if(strlen($continent_id))
+		{
+			$t        = addslashes($continent_id);
+			$xwhere[] = " AND parent_id = $t ";
+		}
+
+		
+		//fmt-params
+		$limit = " LIMIT $pg, $mx ";
+		$more  = @join("\n",$xwhere);
+		
+		//select
+		$sql = "SELECT SQL_CALC_FOUND_ROWS 
+					id,
+					title,
+					img
+				FROM 
+					tbl_menu 
+				WHERE 1=1
+				$more	
+				ORDER BY id
+		       ";	
+		$res   = $gSqlDbSvc['DBCREWTRAVEL']->query($sql, "get_port_of_interest() : ERROR : $sql");
+
+		//total-rows
+		$is_ok = $gSqlDbSvc['DBCREWTRAVEL']->numRows($res);
+		$data  = array();
+		$sdata = array('exists' => intval($is_ok));
+		
+		//get data
+		
+		if($is_ok>0)
+		{
+			while($strow = $gSqlDbSvc['DBCREWTRAVEL']->getAssoc($res))
+			{
+				// $strow['introtext'] = strip_tags($strow['introtext']);
+				// $strow['maintext'] = strip_tags($strow['maintext']);
+				// $strow['introtext'] = trim(preg_replace('/\s+/', ' ', $strow['introtext']));
+				// $strow['maintext'] = trim(preg_replace('/\s+/', ' ', $strow['maintext']));
+				$data[] .= $strow['id'];
+			}
+		}
+		
+		//save
+		
+		debug("get_country_ports() : INFO : [ $sql => $is_ok ]");
+		
+		//free-up
+		if($res) $gSqlDbSvc['DBCREWTRAVEL']->free($res);
+		
+		//give it back ;-)
+		return $data;
+		
+	}
+	
 	protected function get_port_of_interest($pdata=array())
 	{
 		//globals here
@@ -405,7 +734,6 @@ class PORT_GUIDE_Api extends Default_Api{
 		//filter
 		$xwhere   = array();
 		
-		//filter
 		if(strlen($pdata['port']))
 		{
 			$t        = addslashes($pdata['port']);
@@ -441,6 +769,10 @@ class PORT_GUIDE_Api extends Default_Api{
 		{
 			while($strow = $gSqlDbSvc['DBCREWTRAVEL']->getAssoc($res))
 			{
+				$strow['introtext'] = strip_tags($strow['introtext']);
+				$strow['maintext'] = strip_tags($strow['maintext']);
+				$strow['introtext'] = trim(preg_replace('/\s+/', ' ', $strow['introtext']));
+				$strow['maintext'] = trim(preg_replace('/\s+/', ' ', $strow['maintext']));
 				$data[] = $strow;
 			}
 		}
@@ -511,6 +843,8 @@ class PORT_GUIDE_Api extends Default_Api{
 		{
 			while($strow = $gSqlDbSvc['DBCREWTRAVEL']->getAssoc($res))
 			{
+				$strow['port_information'] = strip_tags($strow['port_information']);
+				
 				$data[] = $strow;
 			}
 		}
@@ -588,6 +922,10 @@ class PORT_GUIDE_Api extends Default_Api{
 		{
 			while($strow = $gSqlDbSvc['DBCREWTRAVEL']->getAssoc($res))
 			{
+				$strow['introtext'] = strip_tags($strow['introtext']);
+				$strow['maintext'] = strip_tags($strow['maintext']);
+				$strow['introtext'] = trim(preg_replace('/\s+/', ' ', $strow['introtext']));
+				$strow['maintext'] = trim(preg_replace('/\s+/', ' ', $strow['maintext']));
 				$data[] = $strow;
 			}
 		}
@@ -663,6 +1001,10 @@ class PORT_GUIDE_Api extends Default_Api{
 		{
 			while($strow = $gSqlDbSvc['DBCREWTRAVEL']->getAssoc($res))
 			{
+				$strow['introtext'] = strip_tags($strow['introtext']);
+				$strow['maintext'] = strip_tags($strow['maintext']);
+				$strow['introtext'] = trim(preg_replace('/\s+/', ' ', $strow['introtext']));
+				$strow['maintext'] = trim(preg_replace('/\s+/', ' ', $strow['maintext']));
 				$data[] = $strow;
 			}
 		}
@@ -730,6 +1072,10 @@ class PORT_GUIDE_Api extends Default_Api{
 		{
 			while($strow = $gSqlDbSvc['DBCREWTRAVEL']->getAssoc($res))
 			{
+				$strow['introtext'] = strip_tags($strow['introtext']);
+				$strow['maintext'] = strip_tags($strow['maintext']);
+				$strow['introtext'] = trim(preg_replace('/\s+/', ' ', $strow['introtext']));
+				$strow['maintext'] = trim(preg_replace('/\s+/', ' ', $strow['maintext']));
 				$data[] = $strow;
 			}
 		}
@@ -800,6 +1146,10 @@ class PORT_GUIDE_Api extends Default_Api{
 		{
 			while($strow = $gSqlDbSvc['DBCREWTRAVEL']->getAssoc($res))
 			{
+				$strow['introtext'] = strip_tags($strow['introtext']);
+				$strow['maintext'] = strip_tags($strow['maintext']);
+				$strow['introtext'] = trim(preg_replace('/\s+/', ' ', $strow['introtext']));
+				$strow['maintext'] = trim(preg_replace('/\s+/', ' ', $strow['maintext']));
 				$data[] = $strow;
 			}
 		}

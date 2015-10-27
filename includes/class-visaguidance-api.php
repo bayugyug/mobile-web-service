@@ -63,11 +63,24 @@ class VISA_GUIDANCE_Api extends Default_Api{
 			//chk it
 			switch($this->action)
 			{
+				case API_HIT_VG_NATIONALITY_SEARCH:
+					$this->do_nationality_search();
+					break;
+					
+				case API_HIT_VG_DESTINATION_SEARCH:
+					$this->do_destination_search();
+					break;
+					
 				case API_HIT_VISAGUIDANCE_SEARCH:
 					$this->do_entry_search();
 					break;
+				case API_HIT_VG_VISATYPE_SEARCH:
+					$this->do_visatype_search();
+					break;
 				//notfound
 				default:	
+					echo 'tite';
+					exit();
 					$this->send_reply($this->notfound());
 			}
 		} 
@@ -85,22 +98,65 @@ class VISA_GUIDANCE_Api extends Default_Api{
 		
 	}	
 	
-	//search
-	protected function do_entry_search()
+	//search nationality
+	protected function do_nationality_search()
 	{
-			//get params
-			$country      = trim($_REQUEST['country']);
-			$nationality  = trim($_REQUEST['nationality']);
 			
 			//get paging
 			$paging            = $this->paging();
 			
-			$res = $this->get_page_list(
-						array(
-							'page'       => $paging['pagex'],
-							'batch'      => $paging['batch'],
-							'country'    => $country,
-							'nationality'=> $nationality,
+			$res = $this->get_nationalities(
+						);
+						
+			if(!$res['exists'])
+			{
+				//fmt reply 404
+				$reply['statuscode'] = HTTP_NOT_FOUND;
+				$reply['message']    = "No List found!";
+				//give it back
+				$this->send_reply($reply);
+				return;
+			}
+			
+			//fmt reply 200
+			$reply['status']     = true;
+			$reply['statuscode'] = HTTP_SUCCESS;
+			$reply['message']    = "List(s) found!";
+			$reply['result']     = $res['data'];
+			$reply['batch']      = @intval(@count($res['data']));
+			
+			//paging
+			$reply['totalrows']  = $res['totalrows']['total'];
+			
+			$this->send_reply($reply);
+			
+	}
+	
+
+	
+	//search nationality
+	protected function do_destination_search()
+	{
+			$country_code  = @trim($_REQUEST['country_code']);
+			
+			//sanity check -> LISTS
+			/*
+			if(
+				!strlen($country_code) 
+			)
+			{
+				//fmt reply 500
+				$reply['statuscode'] = HTTP_INTERNAL_SERVER_ERROR;
+				$reply['message']    = "Invalid parameters!";
+				//give it back
+				$this->send_reply($reply);
+				return;
+			}
+			*/
+			
+			$res = $this->get_countries(
+							array(
+							'country_code'=> $country_code,
 							)
 						);
 						
@@ -123,33 +179,316 @@ class VISA_GUIDANCE_Api extends Default_Api{
 			
 			//paging
 			$reply['totalrows']  = $res['totalrows']['total'];
-			$reply['currpage']   = (@count($res['data'])) ? ( $paging['page']    ) : 1;
-			$reply['nextpage']   = (@count($res['data'])) ? ( $paging['page'] + 1) : 1;
 			
 			$this->send_reply($reply);
 			
 	}
 	
 	
+	//search visatype
+	protected function do_visatype_search()
+	{
+			$nationality_code  = trim($_REQUEST['nationality_code']);
+			$destination_code  = trim($_REQUEST['destination_code']);
+			if(
+				!strlen($destination_code) || !strlen($nationality_code)
+			)
+			{
+				//fmt reply 500
+				$reply['statuscode'] = HTTP_INTERNAL_SERVER_ERROR;
+				$reply['message']    = "Invalid parameters!";
+				//give it back
+				$this->send_reply($reply);
+				return;
+			}
+			
+			
+			$res = $this->get_visatypes(
+							array(
+							'nationality_code'=> $nationality_code,
+							'destination_code'=> $destination_code,
+							)
+						);
+						
+			if(!$res['exists'])
+			{
+				//fmt reply 404
+				$reply['statuscode'] = HTTP_NOT_FOUND;
+				$reply['message']    = "No List found!";
+				//give it back
+				$this->send_reply($reply);
+				return;
+			}
+			
+			//fmt reply 200
+			$reply['status']     = true;
+			$reply['statuscode'] = HTTP_SUCCESS;
+			$reply['message']    = "List(s) found!";
+			$reply['result']     = $res['data'];
+			//paging
+			$reply['totalrows']  = $res['totalrows']['total'];
+			
+			$this->send_reply($reply);
+			
+	}
+	
+	//search
+	protected function do_entry_search()
+	{
+			//get params
+			$nationality_code  = trim($_REQUEST['nationality_code']);
+			$destination_code  = trim($_REQUEST['destination_code']);
+			$visa_type    = trim($_REQUEST['visa_type']);
+			
+			if(
+				!strlen($visa_type) || 
+				!strlen($nationality_code) || 
+				!strlen($destination_code)
+			)
+			{
+				//fmt reply 500
+				$reply['statuscode'] = HTTP_INTERNAL_SERVER_ERROR;
+				$reply['message']    = "Invalid parameters!";
+				//give it back
+				$this->send_reply($reply);
+				return;
+			}
+			
+			$res = $this->get_page_list(
+						array(
+							'visa_type'    => $visa_type,
+							'nationality_code'    => $nationality_code,
+							'destination_code'    => $destination_code,
+							
+							)
+						);
+						
+			if(!$res['exists'])
+			{
+				//fmt reply 404
+				$reply['statuscode'] = HTTP_NOT_FOUND;
+				$reply['message']    = "No List found!";
+				//give it back
+				$this->send_reply($reply);
+				return;
+			}
+			
+			//fmt reply 200
+			$reply['status']     = true;
+			$reply['statuscode'] = HTTP_SUCCESS;
+			$reply['message']    = "List(s) found!";
+			$reply['result']     = $res['data'];
+			// $reply['batch']      = @intval(@count($res['data']));
+			
+			//paging
+			$reply['totalrows']  = $res['totalrows']['total'];
+			// $reply['currpage']   = (@count($res['data'])) ? ( $paging['page']    ) : 1;
+			// $reply['nextpage']   = (@count($res['data'])) ? ( $paging['page'] + 1) : 1;
+			
+			$this->send_reply($reply);
+			
+	}
+	
+	
+
 	
 	
 	
 	
+	protected function get_nationalities()
+	{
+		//globals here
+		global $gSqlDb,$gSqlDbSvc;
 	
+		$dmp = @var_export($pdata,1);
+		debug("get_nationalities() : INFO : [ $dmp;]");
+		
+		//filter
+		$xwhere    = array();
+		
+		//fmt-params
+		//$limit = " LIMIT $pg, $mx ";
+		$limit = " " ;
+		$more  = @join("\n",$xwhere);
+		
+		//select
+		$sql = "select a.id, concat(a.nationality, ' (', b.name, ')') AS name, b.country_code
+				FROM tbl_nationality a, tbl_port_country b
+				WHERE 1=1
+					AND a.country_code = b.id 
+				ORDER BY a.id
+				$limit
+		       ";
+			   
+		// echo $sql;
+		// exit();
+		
+		$res   = $gSqlDbSvc['DBCREWTRAVEL']->query($sql, "get_nationalities() : ERROR : $sql");
+
+		//total-rows
+		$is_ok = $gSqlDbSvc['DBCREWTRAVEL']->numRows($res);
+		$data  = array();
+		$sdata = array('exists' => intval($is_ok));
+		
+		//get data
+		if($is_ok>0)
+		{
+			while($strow = $gSqlDbSvc['DBCREWTRAVEL']->getAssoc($res))
+			{
+				$data[] = $strow;
+			}
+		}
+		
+		//save
+		$sdata['data']      = $data;
+		$sdata['totalrows'] = $this->get_total_rows();
+		
+		debug("get_nationalities() : INFO : [ $sql => $is_ok ]");
+		
+		//free-up
+		if($res) $gSqlDbSvc['DBCREWTRAVEL']->free($res);
+		
+		//give it back ;-)
+		return $sdata;
+	}
 	
+	protected function get_countries($pdata=array())
+	{
+		//globals here
+		global $gSqlDb,$gSqlDbSvc;
 	
+		$dmp = @var_export($pdata,1);
+		debug("get_countries() : INFO : [ $dmp;]");
+		
+		//filter
+		$xwhere    = array();
+		
+		$selectAll = ' id,country_code,name ';
+		
+		//filter
+		if(strlen($pdata['country_code']))
+		{
+			$t        = addslashes($pdata['country_code']);
+			$xwhere[] = " AND country_code != '$t' ";
+				
+		}
+		
+		//fmt-params
+		//$limit = " LIMIT $pg, $mx ";
+		$limit = " " ;
+		$more  = @join("\n",$xwhere);
+		
+		//select
+		$sql = "SELECT SQL_CALC_FOUND_ROWS 
+				  $selectAll
+				FROM tbl_port_country 
+				WHERE 1=1
+					$more
+				ORDER BY id
+				$limit
+		       ";
+		
+		$res   = $gSqlDbSvc['DBCREWTRAVEL']->query($sql, "get_countries() : ERROR : $sql");
+
+		//total-rows
+		$is_ok = $gSqlDbSvc['DBCREWTRAVEL']->numRows($res);
+		$data  = array();
+		$sdata = array('exists' => intval($is_ok));
+		
+		//get data
+		if($is_ok>0)
+		{
+			while($strow = $gSqlDbSvc['DBCREWTRAVEL']->getAssoc($res))
+			{
+				$data[] = $strow;
+			}
+		}
+		
+		//save
+		$sdata['data']      = $data;
+		$sdata['totalrows'] = $this->get_total_rows();
+		
+		debug("get_nationalities() : INFO : [ $sql => $is_ok ]");
+		
+		//free-up
+		if($res) $gSqlDbSvc['DBCREWTRAVEL']->free($res);
+		
+		//give it back ;-)
+		return $sdata;
+	}
 	
+	protected function get_visatypes($pdata=array())
+	{
+		//globals here
+		global $gSqlDb,$gSqlDbSvc;
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+		$dmp = @var_export($pdata,1);
+		debug("get_visatypes() : INFO : [ $dmp;]");
+		
+		//filter
+		$xwhere    = array();
+		
+		$selectAll = ' id,visa_type ';
+
+		
+		//filter
+		
+		if(strlen($pdata['nationality_code']))
+		{
+			$t        = addslashes($pdata['nationality_code']);
+			$xwhere[] = " AND nationality_code = '$t' ";
+				
+		}
+		
+		if(strlen($pdata['destination_code']))
+		{
+			$t        = addslashes($pdata['destination_code']);
+			$xwhere[] = " AND destination_code = '$t' ";
+				
+		}
+		
+		//fmt-params
+		//$limit = " LIMIT $pg, $mx ";
+		$limit = " " ;
+		$more  = @join("\n",$xwhere);
+		
+		//select
+		$sql = "SELECT SQL_CALC_FOUND_ROWS 
+				  $selectAll
+				FROM tbl_visa_guidance 
+				WHERE 1=1
+					$more
+				ORDER BY id
+				$limit
+		       ";
+		$res   = $gSqlDbSvc['DBCREWTRAVEL']->query($sql, "get_countries() : ERROR : $sql");
+
+		//total-rows
+		$is_ok = $gSqlDbSvc['DBCREWTRAVEL']->numRows($res);
+		$data  = array();
+		$sdata = array('exists' => intval($is_ok));
+		
+		//get data
+		if($is_ok>0)
+		{
+			while($strow = $gSqlDbSvc['DBCREWTRAVEL']->getAssoc($res))
+			{
+				$data[] = $strow;
+			}
+		}
+		
+		//save
+		$sdata['data']      = $data;
+		$sdata['totalrows'] = $this->get_total_rows();
+		
+		debug("get_visatypes() : INFO : [ $sql => $is_ok ]");
+		
+		//free-up
+		if($res) $gSqlDbSvc['DBCREWTRAVEL']->free($res);
+		
+		//give it back ;-)
+		return $sdata;
+	}
 	
 	
 	
@@ -169,36 +508,44 @@ class VISA_GUIDANCE_Api extends Default_Api{
 		
 		//filter
 		$xwhere    = array();
-		$selectAll = ' id,country_iatacode,nationality ';
-
+		$selectAll = ' id,state,additional_info,requirements,other_requirements,ordering ';
+	
 		//filter
-		if(strlen($pdata['nationality']))
+		if(strlen($pdata['nationality_code']))
 		{
-			$t        = addslashes($pdata['nationality']);
-			$xwhere[] = " AND country_iatacode = '$t' ";
+			$t        = addslashes($pdata['nationality_code']);
+			$xwhere[] .= " AND nationality_code = '$t' ";
 				
 		}
 			
-		if(strlen($pdata['country']))
+		if(strlen($pdata['destination_code']))
 		{
-			$t        = addslashes($pdata['country']);
-			$selectAll= " id, $t ";
+			$u        = addslashes($pdata['destination_code']);
+			$xwhere[] .= " AND destination_code = '$u' ";
 		}
 		
+		if(strlen($pdata['visa_type']))
+		{
+			$v        = addslashes($pdata['visa_type']);
+			$xwhere[] .= " AND visa_type = '$v' ";
+		}
+	
+		
 		//fmt-params
-		$limit = " LIMIT $pg, $mx ";
+		// $limit = " LIMIT $pg, $mx ";
+		
+		$limit = " ";
 		$more  = @join("\n",$xwhere);
 		
 		//select
-		$sql = "SELECT SQL_CALC_FOUND_ROWS 
-				  $selectAll
-				FROM tbl_visa_requirements_view 
-				WHERE 1=1
-					$more
+		$sql = "SELECT  $selectAll
+				FROM tbl_visa_guidance 
+				WHERE 1=1 $more
 				ORDER BY id
 				$limit
 		       ";
-		
+		// echo $sql;
+		// exit();
 		$res   = $gSqlDbSvc['DBCREWTRAVEL']->query($sql, "get_page_list() : ERROR : $sql");
 
 		//total-rows

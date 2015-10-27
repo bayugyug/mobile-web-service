@@ -129,6 +129,10 @@ define('LDAP_ENTRY_ROOT_DN_UPD', "cn=Directory Manager");
 define('API_HIT_SIGN_IN',       'signin');
 define('API_HIT_LOG_IN',        API_HIT_SIGN_IN);
 define('API_HIT_ENTRY_SEARCH',  'search');
+define('API_HIT_ENTRY_CREATE_PASSCODE',  'create_passcode');
+define('API_HIT_ENTRY_CHECK_PASSCODE',  'check_passcode');
+define('API_HIT_ENTRY_CHECK_PASSCODE',  'check_passcode');
+define('API_HIT_ENTRY_SEARCH',  'search');
 define('API_HIT_ENTRY_LIST',    'list');
 define('API_HIT_ENTRY_UPDATE',  'update');
 define('API_HIT_ENTRY_ADD',     'add');
@@ -198,6 +202,10 @@ define('LDAP_API_ENC_PASS',  md5(sprintf("%s-%s",LDAP_API_ENC_METHOD,'#!/ldap/re
 
 //visa-guidance
 define('API_HIT_VISAGUIDANCE_SEARCH',  'search');
+define('API_HIT_VG_NATIONALITY_SEARCH',  'getnationality');
+define('API_HIT_VG_DESTINATION_SEARCH',  'getcountries');
+define('API_HIT_VG_VISATYPE_SEARCH',  'getvisatype');
+
 
 //travel-tips
 define('API_HIT_TRAVEL_TIPS_SEARCH',      'search');
@@ -206,7 +214,11 @@ define('API_HIT_TRAVEL_TIPS_SEARCH',      'search');
 define('API_HIT_TRAVEL_ITINERARY_SEARCH', 'search');
 
 //port guide
+define('API_HIT_PORT_GUIDE_CONTINENTS',   'search-continent');
+define('API_HIT_PORT_GUIDE_PORTS',   'search-port');
 define('API_HIT_PORT_GUIDE_POI',          'search-poi');
+
+
 define('API_HIT_PORT_GUIDE_AGENT',        'search-agent');
 define('API_HIT_PORT_GUIDE_PORTS1',       'search-get-port1');
 define('API_HIT_PORT_GUIDE_PORTS2',       'search-get-port2');
